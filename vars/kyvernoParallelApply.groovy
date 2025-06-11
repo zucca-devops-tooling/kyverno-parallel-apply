@@ -39,36 +39,68 @@ def call(Map params = [:]) {
             distributor.distribute()
         }
 
+        // A map to store the results from each parallel stage
+        def stageResults = [:]
+
         // --- PARALLEL EXECUTION STAGE ---
         stage('Parallel Kyverno Apply') {
-            // Create a map to hold all the parallel stages.
-            def parallelStages = [:]
-            for (int i = 0; i < config.parallelStageCount; i++) {
-                // Use a local variable in the loop to avoid closure scoping issues.
-                final int shardIndex = i
+            steps {
+                script {
+                    // Ensure the final directory for generated resources exists before we start
+                    if (config.generatedResourcesDir) {
+                        sh "mkdir -p ${config.generatedResourcesDir}"
+                    }
 
-                // Ask the workspace manager for the correct directory for this shard.
-                def shardDir = workspace.getShardDirectory(shardIndex)
+                    def parallelStages = [:]
 
-                // Define the closure for this parallel stage.
-                parallelStages["Shard ${shardIndex}"] = {
-                    node { // It's good practice to grab a node for each parallel stage
-                        stage("Apply on Shard ${shardIndex}") {
-                            echo "Running kyverno on manifests in ${shardDir}"
+                    for (int i = 0; i < config.parallelStageCount; i++) {
+                        final int shardIndex = i
 
-                            // Construct the kyverno command safely.
-                            // The library controls the core command and output redirection.
-                            def baseCommand = "kyverno apply \"${config.policyPath}\" --resource=\"${shardDir}\""
-                            def reportOutput = "> \"${shardDir}/report.yaml\""
+                        parallelStages["Shard ${shardIndex}"] = {
+                            node {
+                                stage("Apply on Shard ${shardIndex}") {
+                                    // --- THIS IS THE FIX ---
+                                    // We wrap the entire logic in a try/catch block.
+                                    try {
+                                        def shardDir = workspace.getShardDirectory(shardIndex)
 
-                            // Safely append any extra user-provided arguments.
-                            sh "${baseCommand} ${config.extraKyvernoArgs} ${reportOutput}"
+                                        def baseCommand = """
+                                                                kyverno apply \"${config.policyPath}\"  \
+                                                                    -v ${config.kyvernoVerbosity} \
+                                                                    -o ${config.generatedResourcesDir} \
+                                                                    --resource \"${shardDir}\" \
+                                                                    ${config.extraKyvernoArgs}
+                                                                """
+                                        def reportOutput = " > \"${shardDir}/report.yaml\""
+
+                                        if (config.valuesFilePath != null) {
+                                            baseCommand += " --values-file '${config.valuesFilePath}'"
+                                        }
+
+                                        // Safely append any extra user-provided arguments.
+                                        sh "${baseCommand}  ${reportOutput}"
+                                        stageResults[shardIndex] = [status: 'SUCCESS']
+                                    } catch (Exception e) {
+                                        // If sh() fails, the exception is caught here.
+                                        echo "ERROR: Shard ${shardIndex} failed!"
+                                        stageResults[shardIndex] = [status: 'FAILURE', error: e.message]
+                                        // We do NOT re-throw the error, allowing other stages to continue.
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    parallel(failFast: false, parallelStages)
+
+                    echo "All parallel stages complete. Analyzing results..."
+                    stageResults.each { index, result ->
+                        if (result.status == 'FAILURE') {
+                            echo "Shard ${index} had a failure: ${result.error}"
                         }
                     }
                 }
             }
-            // Execute all the defined stages in parallel.
-            parallel parallelStages
         }
 
         // --- MERGE RESULTS STAGE ---
@@ -89,6 +121,11 @@ def call(Map params = [:]) {
             archiveArtifacts artifacts: finalReportPath, followSymlinks: false
         }
 
+        echo "Finalizing build status..."
+        boolean hasFailures = stageResults.any { it.value.status == 'FAILURE' }
+        if (hasFailures) {
+            error "One or more Kyverno parallel stages failed. Check logs for details."
+        }
     } finally {
         // --- CLEANUP STAGE ---
         stage('Cleanup Workspace') {

@@ -8,13 +8,17 @@ class Configuration {
     final int parallelStageCount
     final String manifestSourceDirectory
     final String extraKyvernoArgs
+    final String generatedResourcesDir
+    final int kyvernoVerbosity
 
     private static final Map DEFAULTS = [
             policyPath: './policies',
             finalReportPath: 'final-kyverno-report.yaml',
             valuesFilePath: null,
             parallelStageCount: 4,
-            manifestSourceDirectory: './kustomize-output'
+            manifestSourceDirectory: './kustomize-output',
+            kyvernoVerbosity: 2,
+            generatedResourcesDir: 'generated-resources'
     ].asImmutable()
 
     private static final List FORBIDDEN_ARGS = [
@@ -45,6 +49,8 @@ class Configuration {
         this.parallelStageCount = effectiveConfig.parallelStageCount as int
         this.manifestSourceDirectory = effectiveConfig.manifestSourceDirectory
         this.extraKyvernoArgs = effectiveConfig.extraKyvernoArgs
+        this.generatedResourcesDir = effectiveConfig.generatedResourcesDir
+        this.kyvernoVerbosity = effectiveConfig.kyvernoVerbosity as int
 
         validate(steps)
     }
@@ -89,7 +95,6 @@ class Configuration {
                 }
             }
         }
-
 
         steps.echo "Configuration validation successful."
     }
