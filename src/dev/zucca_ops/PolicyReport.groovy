@@ -1,6 +1,6 @@
 package dev.zucca_ops
 
-class PolicyReport {
+class PolicyReport implements Serializable {
 
     String apiVersion
     String kind
@@ -20,23 +20,33 @@ class PolicyReport {
         this.apiVersion = parsedYaml.apiVersion
         this.kind = parsedYaml.kind
         this.metadata = parsedYaml.metadata as Map
-        this.summary = parsedYaml.summary ?: [:] as Map
-        this.results = parsedYaml.results ?: [] as List<Map>
-    }
-
-    void merge(PolicyReport otherReport) {
-        this.summary.pass += otherReport.summary.pass ?: 0
-        this.summary.fail += otherReport.summary.fail ?: 0
-        this.summary.warn += otherReport.summary.warn ?: 0
-        this.summary.error += otherReport.summary.error ?: 0
-        this.summary.skip += otherReport.summary.skip ?: 0
-
-        this.results.addAll(otherReport.results)
+        this.summary = parsedYaml.summary ?: [:]
+        this.results = parsedYaml.results ?: []
     }
 
     /**
-     * Converts the object into a Map. This map will be passed
-     * directly to the writeYaml step.
+     * This method merges another report into this one. It aggregates the
+     * summary counts and concatenates the individual results lists.
+     * @param otherReport The report to merge from.
+     */
+    void merge(PolicyReport otherReport) {
+        // Handle summary aggregation
+        if (otherReport.summary) {
+            this.summary.pass += otherReport.summary.pass ?: 0
+            this.summary.fail += otherReport.summary.fail ?: 0
+            this.summary.warn += otherReport.summary.warn ?: 0
+            this.summary.error += otherReport.summary.error ?: 0
+            this.summary.skip += otherReport.summary.skip ?: 0
+        }
+
+        // Handle results aggregation
+        if (otherReport.results) {
+            this.results.addAll(otherReport.results)
+        }
+    }
+
+    /**
+     * Converts the object into a Map suitable for the writeYaml step.
      */
     Map toMap() {
         return [

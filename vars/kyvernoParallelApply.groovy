@@ -83,11 +83,10 @@ def call(Map params = [:]) {
                                                             ${valuesFileCommand} \
                                                             ${config.extraKyvernoArgs}
                                                         """.trim()
-                                def reportOutput = " | sed -n '/^apiVersion:/,\$p'  > \"${shardDir}/report.yaml\""
+                                def reportOutput = " > \"${shardDir}/report.yaml\""
 
                                 // Safely append any extra user-provided arguments.
                                 sh "${baseCommand}  ${reportOutput} ${stdErrRedirect}"
-                                sh "cat ${shardDir}/report.yaml"
                                 stageResults[shardIndex] = [status: 'SUCCESS']
                             } catch (Exception e) {
                                 // If sh() fails, the exception is caught here.
