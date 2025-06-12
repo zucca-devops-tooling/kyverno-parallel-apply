@@ -53,6 +53,10 @@ def call(Map params = [:]) {
                     ? " --values-file '${workspace.getFolder(config.valuesFilePath)}'"
                     : ""
 
+            if (config.debugLogDir) {
+                sh "mkdir -p ${workspace.getFolder(config.debugLogDir)}"
+            }
+
             // Ensure the final directory for generated resources exists before we start
             if (generatedResourcesDir) {
                 sh "mkdir -p ${generatedResourcesDir}"
