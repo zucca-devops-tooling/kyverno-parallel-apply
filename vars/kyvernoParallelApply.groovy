@@ -74,9 +74,9 @@ def call(Map params = [:]) {
                                                             -v ${config.kyvernoVerbosity} \
                                                             -o ${generatedResourcesDir} \
                                                             --resource \"${shardDir}\" \
-                                                            ${valuesFileCommand}
+                                                            ${valuesFileCommand} \
                                                             ${config.extraKyvernoArgs}
-                                                        """
+                                                        """.trim()
                                 def reportOutput = " > \"${shardDir}/report.yaml\""
 
                                 // Safely append any extra user-provided arguments.
