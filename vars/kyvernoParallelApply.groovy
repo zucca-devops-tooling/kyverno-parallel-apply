@@ -90,7 +90,7 @@ def call(Map params = [:]) {
                 }
             }
 
-            parallel(failFast: false, parallelStages)
+            parallel(parallelStages)
 
             echo "All parallel stages complete. Analyzing results..."
             stageResults.each { index, result ->
