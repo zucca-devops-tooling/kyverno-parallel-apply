@@ -86,11 +86,12 @@ def call(Map params = [:]) {
                                 def reportOutput = " > \"${shardDir}/report.yaml\""
 
                                 // Safely append any extra user-provided arguments.
-                                sh "${baseCommand}  ${reportOutput} ${stdErrRedirect}"
+                                sh "${baseCommand} ${reportOutput} ${stdErrRedirect}"
                                 stageResults[shardIndex] = [status: 'SUCCESS']
                             } catch (Exception e) {
                                 // If sh() fails, the exception is caught here.
                                 echo "ERROR: Shard ${shardIndex} failed!"
+                                echo "${e.message}"
                                 stageResults[shardIndex] = [status: 'FAILURE', error: e.message]
                                 // We do NOT re-throw the error, allowing other stages to continue.
                             }
