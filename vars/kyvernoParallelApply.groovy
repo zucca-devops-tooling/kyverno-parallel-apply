@@ -88,7 +88,7 @@ def call(Map params = [:]) {
 
                                 // Safely append any extra user-provided arguments.
                                 println("${baseCommand}  ${reportOutput} ${stdErrRedirect}")
-                                sh "${baseCommand} ${reportOutput} ${stdErrRedirect}"
+                                sh "${baseCommand}  ${stdErrRedirect}"
                                 stageResults[shardIndex] = [status: 'SUCCESS']
                             } catch (Exception e) {
                                 // If sh() fails, the exception is caught here.
