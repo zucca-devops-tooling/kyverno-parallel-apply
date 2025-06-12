@@ -80,6 +80,7 @@ def call(Map params = [:]) {
                                 def reportOutput = " > \"${shardDir}/report.yaml\""
 
                                 // Safely append any extra user-provided arguments.
+                                println("executing ${baseCommand} ${reportOutput}")
                                 sh "${baseCommand}  ${reportOutput}"
                                 stageResults[shardIndex] = [status: 'SUCCESS']
                             } catch (Exception e) {
