@@ -38,7 +38,7 @@ class Configuration {
         this.paramsConfig = params
     }
 
-    public void loadConfig() {
+    void loadConfig() {
         def effectiveConfig = new HashMap(DEFAULTS)
 
         if (paramsConfig.configFile) {
@@ -49,6 +49,7 @@ class Configuration {
             }
         }
 
+        steps.println(paramsConfig)
         effectiveConfig.putAll(paramsConfig)
 
         this.policyPath = effectiveConfig.policyPath
