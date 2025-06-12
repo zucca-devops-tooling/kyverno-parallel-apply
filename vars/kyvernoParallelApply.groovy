@@ -86,7 +86,8 @@ def call(Map params = [:]) {
                                 def reportOutput = " | sed -n '/^apiVersion:/,\$p'  > \"${shardDir}/report.yaml\""
 
                                 // Safely append any extra user-provided arguments.
-                                sh "${baseCommand}  ${reportOutput}"
+                                sh "${baseCommand}  ${reportOutput} ${stdErrRedirect}"
+                                sh "cat ${shardDir}/report.yaml"
                                 stageResults[shardIndex] = [status: 'SUCCESS']
                             } catch (Exception e) {
                                 // If sh() fails, the exception is caught here.
