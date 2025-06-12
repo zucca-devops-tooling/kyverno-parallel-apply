@@ -10,6 +10,8 @@ class Configuration {
     String extraKyvernoArgs
     String generatedResourcesDir
     int kyvernoVerbosity
+    String debugLogDir
+
     final Map paramsConfig
     final Script steps
 
@@ -21,7 +23,8 @@ class Configuration {
             manifestSourceDirectory: './kustomize-output',
             kyvernoVerbosity: 2,
             generatedResourcesDir: 'generated-resources',
-            extraKyvernoArgs: ""
+            extraKyvernoArgs: "",
+            debugLogDir: null
     ].asImmutable()
 
     private static final List FORBIDDEN_ARGS = [
@@ -59,6 +62,7 @@ class Configuration {
         this.extraKyvernoArgs = effectiveConfig.extraKyvernoArgs
         this.generatedResourcesDir = effectiveConfig.generatedResourcesDir
         this.kyvernoVerbosity = effectiveConfig.kyvernoVerbosity as int
+        this.debugLogDir = effectiveConfig.debugLogDir
 
         validate()
     }

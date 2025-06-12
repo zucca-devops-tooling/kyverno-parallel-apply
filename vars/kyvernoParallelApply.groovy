@@ -64,10 +64,12 @@ def call(Map params = [:]) {
                 parallelStages["Shard ${shardIndex}"] = {
                     node {
                         stage("Apply on Shard ${shardIndex}") {
-                            // --- THIS IS THE FIX ---
-                            // We wrap the entire logic in a try/catch block.
                             try {
                                 def shardDir = workspace.getShardDirectory(shardIndex)
+
+                                def stdErrRedirect = config.debugLogDir != null
+                                        ? " 2> '${workspace.getShardLogFile(config.debugLogDir, shardIndex)}'"
+                                        : ""
 
                                 def baseCommand = """
                                                         kyverno apply \"${policyPath}\"  \
@@ -77,10 +79,10 @@ def call(Map params = [:]) {
                                                             ${valuesFileCommand} \
                                                             ${config.extraKyvernoArgs}
                                                         """.trim()
-                                def reportOutput = " > \"${shardDir}/report.yaml\""
+                                def reportOutput = " | sed -n '/^apiVersion:/,\$p'  > \"${shardDir}/report.yaml\""
 
                                 // Safely append any extra user-provided arguments.
-                                println("executing ${baseCommand} ${reportOutput}")
+                                println("executing ${baseCommand} ${reportOutput} ${stdErrRedirect}")
                                 sh "${baseCommand}  ${reportOutput}"
                                 stageResults[shardIndex] = [status: 'SUCCESS']
                             } catch (Exception e) {

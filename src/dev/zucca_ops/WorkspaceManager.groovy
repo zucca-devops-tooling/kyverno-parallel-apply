@@ -37,6 +37,28 @@ class WorkspaceManager {
     }
 
     /**
+     * Returns the absolute path for a specific shard's debug log file.
+     * It intelligently handles both relative and absolute paths provided
+     * by the user in the configuration.
+     *
+     * @param debugLogDir The user-configured directory for debug logs.
+     * @param index The index of the shard (e.g., 0, 1, 2...).
+     * @return The full, absolute path to the log file.
+     */
+    String getShardLogFile(String debugLogDir, int index) {
+        String filename = "shard-${index}-debug.log"
+
+        // The simplest and safest way to check for an absolute path in this context
+        if (debugLogDir.startsWith('/')) {
+            // Path is already absolute, just append the filename
+            return "${debugLogDir}/${filename}"
+        } else {
+            // Path is relative, prepend the known absolute path to the workspace root
+            return "${this.workspaceRoot}/${debugLogDir}/${filename}"
+        }
+    }
+
+    /**
      * Returns the path to the directory where final results should be stored.
      */
     String getResultDirectory() {
@@ -75,5 +97,9 @@ class WorkspaceManager {
         steps.echo "Cleaning up temporary workspace: ${this.workspaceRoot}"
         // Safely remove the entire workspace root directory
         steps.sh "rm -rf ${this.workspaceRoot}"
+    }
+
+    private boolean isAbsolutePath(String path) {
+        return path.startsWith("/")
     }
 }
