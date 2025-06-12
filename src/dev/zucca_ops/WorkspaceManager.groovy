@@ -19,13 +19,6 @@ class WorkspaceManager {
     }
 
     /**
-     * Returns the absolute path to the root of the temporary workspace.
-     */
-    String getWorkspaceRoot() {
-        return this.workspaceRoot
-    }
-
-    /**
      * Returns the path to the directory that will hold all parallel shard folders.
      */
     String getShardsBaseDirectory() {
