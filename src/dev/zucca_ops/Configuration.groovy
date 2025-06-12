@@ -20,7 +20,8 @@ class Configuration {
             parallelStageCount: 4,
             manifestSourceDirectory: './kustomize-output',
             kyvernoVerbosity: 2,
-            generatedResourcesDir: 'generated-resources'
+            generatedResourcesDir: 'generated-resources',
+            extraKyvernoArgs: ""
     ].asImmutable()
 
     private static final List FORBIDDEN_ARGS = [
