@@ -15,7 +15,7 @@ class WorkspaceManager {
      */
     WorkspaceManager(String baseDirectory, String runIdentifier) {
         // Create a unique root directory for this specific run, e.g., '.workspace/run-42'
-        this.workspaceRoot = Paths.get(baseDirectory, '.workspace', "run-${runIdentifier}").toString()
+        this.workspaceRoot = "${baseDirectory}/.workspace/run-${runIdentifier}"
     }
 
     /**
@@ -29,7 +29,7 @@ class WorkspaceManager {
      * Returns the path to the directory that will hold all parallel shard folders.
      */
     String getShardsBaseDirectory() {
-        return Paths.get(this.workspaceRoot, SHARDS_DIR_NAME).toString()
+        return "${this.workspaceRoot}/${SHARDS_DIR_NAME}"
     }
 
     /**
@@ -37,14 +37,14 @@ class WorkspaceManager {
      * This is the method your other functions will call.
      */
     String getShardDirectory(int index) {
-        return Paths.get(getShardsBaseDirectory(), Integer.toString(index)).toString()
+        return "${getShardsBaseDirectory()}/${index}"
     }
 
     /**
      * Returns the path to the directory where final results should be stored.
      */
     String getResultDirectory() {
-        return Paths.get(this.workspaceRoot, RESULTS_DIR_NAME).toString()
+        return "${this.workspaceRoot}/${RESULTS_DIR_NAME}"
     }
 
     /**
