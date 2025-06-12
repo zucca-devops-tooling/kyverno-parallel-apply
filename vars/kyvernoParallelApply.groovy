@@ -19,6 +19,7 @@ def call(Map params = [:]) {
     // The 'this' object in a 'vars' script is a reference to the pipeline steps provider.
     // It's passed to our helper classes so they can call steps like 'sh', 'readFile', etc.
     def config = new Configuration(params, this)
+    config.loadConfig()
 
     // Use the Jenkins BUILD_NUMBER to create a unique workspace for each run, preventing conflicts.
     def workspace = new WorkspaceManager(pwd(), env.BUILD_NUMBER)

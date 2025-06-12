@@ -2,14 +2,16 @@ package dev.zucca_ops
 
 class Configuration {
 
-    final String policyPath
-    final String finalReportPath
-    final String valuesFilePath
-    final int parallelStageCount
-    final String manifestSourceDirectory
-    final String extraKyvernoArgs
-    final String generatedResourcesDir
-    final int kyvernoVerbosity
+    String policyPath
+    String finalReportPath
+    String valuesFilePath
+    int parallelStageCount
+    String manifestSourceDirectory
+    String extraKyvernoArgs
+    String generatedResourcesDir
+    int kyvernoVerbosity
+    final Map paramsConfig
+    final Script steps
 
     private static final Map DEFAULTS = [
             policyPath: './policies',
@@ -30,18 +32,23 @@ class Configuration {
      * @param params The map of parameters passed to the pipeline step.
      * @param steps A reference to the pipeline steps object for file I/O.
      */
-    Configuration(Map params, def steps) {
+    Configuration(Map params, Script steps) {
+        this.steps = steps
+        this.paramsConfig = params
+    }
+
+    public void loadConfig() {
         def effectiveConfig = new HashMap(DEFAULTS)
 
-        if (params.configFile) {
-            steps.echo "Reading configuration from ${params.configFile}"
-            Map configFromFile = steps.readYaml(file: params.configFile)
+        if (paramsConfig.configFile) {
+            steps.echo "Reading configuration from ${paramsConfig.configFile}"
+            Map configFromFile = steps.readYaml(file: paramsConfig.configFile)
             if (configFromFile) {
                 effectiveConfig.putAll(configFromFile)
             }
         }
 
-        effectiveConfig.putAll(params)
+        effectiveConfig.putAll(paramsConfig)
 
         this.policyPath = effectiveConfig.policyPath
         this.finalReportPath = effectiveConfig.finalReportPath
@@ -52,7 +59,7 @@ class Configuration {
         this.generatedResourcesDir = effectiveConfig.generatedResourcesDir
         this.kyvernoVerbosity = effectiveConfig.kyvernoVerbosity as int
 
-        validate(steps)
+        validate()
     }
 
     /**
@@ -60,7 +67,7 @@ class Configuration {
      * Throws a build-stopping error if any validation fails.
      * @param steps The pipeline steps object to call fileExists() and error().
      */
-    void validate(def steps) {
+    private void validate() {
 
         // 1. Validate parallelStageCount
         if (this.parallelStageCount <= 0) {
