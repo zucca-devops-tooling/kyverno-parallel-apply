@@ -86,7 +86,6 @@ def call(Map params = [:]) {
                                 def reportOutput = " | sed -n '/^apiVersion:/,\$p'  > \"${shardDir}/report.yaml\""
 
                                 // Safely append any extra user-provided arguments.
-                                println("executing ${baseCommand} ${reportOutput} ${stdErrRedirect}")
                                 sh "${baseCommand}  ${reportOutput}"
                                 stageResults[shardIndex] = [status: 'SUCCESS']
                             } catch (Exception e) {
@@ -113,7 +112,10 @@ def call(Map params = [:]) {
         // --- MERGE RESULTS STAGE ---
         stage('Merge Policy Reports') {
             def finalReport = merger.merge(config.parallelStageCount)
-            def finalReportPath = "${workspace.getResultDirectory()}/final-report.yaml"
+            def resultsDirectory = workspace.getResultDirectory()
+
+            sh "mkdir -p ${resultsDirectory}"
+            def finalReportPath = "${resultsDirectory}/final-report.yaml"
 
             // Use the Jenkins-native writeYaml step to serialize the final report.
             writeYaml(
