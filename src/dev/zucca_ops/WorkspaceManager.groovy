@@ -5,6 +5,8 @@ class WorkspaceManager {
     // The root directory for all temporary files for this run.
     private final String workspaceRoot
 
+    private final String baseDirectory
+
     // Use constants for subdirectory names for easy modification.
     private static final String SHARDS_DIR_NAME = 'shards'
     private static final String RESULTS_DIR_NAME = 'results'
@@ -14,6 +16,7 @@ class WorkspaceManager {
      * @param runIdentifier A unique ID for the run, like BUILD_NUMBER, to avoid collisions.
      */
     WorkspaceManager(String baseDirectory, String runIdentifier) {
+        this.baseDirectory = baseDirectory
         // Create a unique root directory for this specific run, e.g., '.workspace/run-42'
         this.workspaceRoot = "${baseDirectory}/.workspace/run-${runIdentifier}"
     }
@@ -45,7 +48,7 @@ class WorkspaceManager {
             return folder
         }
 
-        return "${this.workspaceRoot}/${folder}"
+        return "${this.baseDirectory}/${folder}"
     }
 
     /**
