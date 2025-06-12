@@ -60,7 +60,7 @@ class Configuration {
      * Throws a build-stopping error if any validation fails.
      * @param steps The pipeline steps object to call fileExists() and error().
      */
-    private void validate(def steps) {
+    void validate(def steps) {
 
         // 1. Validate parallelStageCount
         if (this.parallelStageCount <= 0) {
