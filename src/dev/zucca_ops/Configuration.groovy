@@ -49,7 +49,6 @@ class Configuration {
             }
         }
 
-        steps.println(paramsConfig)
         effectiveConfig.putAll(paramsConfig)
 
         this.policyPath = effectiveConfig.policyPath

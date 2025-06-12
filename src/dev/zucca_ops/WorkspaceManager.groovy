@@ -40,6 +40,14 @@ class WorkspaceManager {
         return "${this.workspaceRoot}/${RESULTS_DIR_NAME}"
     }
 
+    String getFolder(String folder) {
+        if (folder.startsWith("/")) {
+            return folder
+        }
+
+        return "${this.workspaceRoot}/${folder}"
+    }
+
     /**
      * Creates the entire directory structure needed for the run.
      * @param steps The pipeline steps object to execute 'sh'.

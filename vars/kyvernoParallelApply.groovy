@@ -45,12 +45,18 @@ def call(Map params = [:]) {
 
         // --- PARALLEL EXECUTION STAGE ---
         stage('Parallel Kyverno Apply') {
-            // Ensure the final directory for generated resources exists before we start
-            if (config.generatedResourcesDir) {
-                sh "mkdir -p ${config.generatedResourcesDir}"
-            }
-
             def parallelStages = [:]
+
+            def policyPath = workspace.getFolder(config.policyPath)
+            def generatedResourcesDir = workspace.getFolder(config.generatedResourcesDir)
+            def valuesFileCommand = config.valuesFilePath != null
+                    ? " --values-file '${workspace.getFolder(config.valuesFilePath)}'"
+                    : ""
+
+            // Ensure the final directory for generated resources exists before we start
+            if (generatedResourcesDir) {
+                sh "mkdir -p ${generatedResourcesDir}"
+            }
 
             for (int i = 0; i < config.parallelStageCount; i++) {
                 final int shardIndex = i
@@ -64,17 +70,14 @@ def call(Map params = [:]) {
                                 def shardDir = workspace.getShardDirectory(shardIndex)
 
                                 def baseCommand = """
-                                                        kyverno apply \"${config.policyPath}\"  \
+                                                        kyverno apply \"${policyPath}\"  \
                                                             -v ${config.kyvernoVerbosity} \
-                                                            -o ${config.generatedResourcesDir} \
+                                                            -o ${generatedResourcesDir} \
                                                             --resource \"${shardDir}\" \
+                                                            ${valuesFileCommand}
                                                             ${config.extraKyvernoArgs}
                                                         """
                                 def reportOutput = " > \"${shardDir}/report.yaml\""
-
-                                if (config.valuesFilePath != null) {
-                                    baseCommand += " --values-file '${config.valuesFilePath}'"
-                                }
 
                                 // Safely append any extra user-provided arguments.
                                 sh "${baseCommand}  ${reportOutput}"
