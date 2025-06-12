@@ -81,7 +81,8 @@ def call(Map params = [:]) {
                                                             -o ${generatedResourcesDir} \
                                                             --resource \"${shardDir}\" \
                                                             ${valuesFileCommand} \
-                                                            ${config.extraKyvernoArgs}
+                                                            ${config.extraKyvernoArgs} \
+                                                            --policy-report \
                                                         """.trim()
                                 def reportOutput = " > \"${shardDir}/report.yaml\""
 
