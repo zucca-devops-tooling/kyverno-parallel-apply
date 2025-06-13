@@ -30,19 +30,26 @@ class FileDistributor {
                 set -e
         
                 find "${config.manifestSourceDirectory}" -type f | while IFS= read -r file; do
-                    # 1. CORRECT SYNTAX: awk program is in single quotes (\') and uses \$1.
+                    # Get sha256 hash
                     hash=\$(sha256sum "\$file" | awk \'{print \$1}\')
         
-                    # 2. ROBUSTNESS CHECK: Handles cases where hash calculation fails.
+                    # Check for empty hash
                     if [ -z "\$hash" ]; then
                         echo "Warning: Could not compute hash for file: \$file. Skipping." >&2
                         continue
                     fi
         
-                    # The rest of the script will now execute safely
-                    hash_dec=\$((0x\${hash:0:8}))
+                    # Use `cut` for substring to ensure portability across all shells (sh, bash, etc.)
+                    hash_prefix=\$(echo "\$hash" | cut -c1-8)
+                    hash_dec=\$((0x\$hash_prefix))
+        
+                    # Compute shard index
                     target_index=\$((hash_dec % ${config.parallelStageCount}))
+        
+                    # Get target dir from Groovy
                     destination_dir="${workspace.getShardsBaseDirectory()}/\${target_index}"
+        
+                    # Copy the file
                     cp "\$file" "\$destination_dir/"
                 done
         
