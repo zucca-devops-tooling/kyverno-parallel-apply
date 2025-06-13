@@ -21,8 +21,6 @@ class ReportMerger implements Serializable {
 
 
         for (int i = 0; i < shardCount; i++) {
-            steps.sh "ls ${workspace.getShardDirectory(i)}"
-            steps.sh "cat ${workspace.getShardDirectory(i)}/report.yaml"
             def reportPath = "${workspace.getShardDirectory(i)}/report.yaml"
 
             if (steps.fileExists(reportPath)) {
@@ -30,7 +28,6 @@ class ReportMerger implements Serializable {
 
                 // Read the entire raw output file, including any log lines.
                 def rawContent = steps.readFile(reportPath)
-                println(rawContent)
 
                 // Use the helper method to clean and parse the content.
                 def partialReport = parseCleanReportFrom(rawContent)
@@ -58,11 +55,13 @@ class ReportMerger implements Serializable {
      */
     private PolicyReport parseCleanReportFrom(String rawOutput) {
         if (!rawOutput || rawOutput.trim().isEmpty()) {
+            steps.echo "its empty"
             return null
         }
 
-        def reportStartIndex = rawOutput.indexOf("apiVersion:")
+        def reportStartIndex = rawOutput.indexOf("apiVersion")
         if (reportStartIndex != -1) {
+            steps.echo "not found"
             def cleanReportYaml = rawOutput.substring(reportStartIndex)
             try {
                 def parsedData = steps.readYaml(text: cleanReportYaml)
