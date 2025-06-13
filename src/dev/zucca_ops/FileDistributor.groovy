@@ -29,7 +29,7 @@ class FileDistributor {
             bash -c '
                 set -e
         
-                find "${config.manifestSourceDirectory}" -type f | while IFS= read -r file; do
+                find "kustomize-output" -type f | while IFS= read -r file; do
                     # Get sha256 hash of the file content
                     hash=\$(sha256sum "\$file" | awk \'{print \$1}\')
         
@@ -37,10 +37,10 @@ class FileDistributor {
                     hash_dec=\$((0x\${hash:0:8}))
         
                     # Compute shard index
-                    target_index=\$((hash_dec % ${config.parallelStageCount}))
+                    target_index=\$((hash_dec % 4))
         
-                    # Get target dir from Groovy
-                    destination_dir="${workspace.getShardsBaseDirectory()}/\${target_index}"
+                    # Compute destination dir (from Groovy)
+                    destination_dir="/var/lib/jenkins/workspace/ithub-org_k8s-at-scale-demo_PR-2/.workspace/run-48/shards/\${target_index}"
         
                     # Copy the file
                     cp "\$file" "\$destination_dir/"
