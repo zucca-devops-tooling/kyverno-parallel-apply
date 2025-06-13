@@ -26,32 +26,22 @@ class FileDistributor {
         steps.echo "Distributing files from '${sourceDir}' into ${parallelStageCount} shards based on file content..."
 
         steps.sh(script: """
-            bash -c 'set -e
-            find "." -type f | while IFS= read -r file; do
-                # Get sha256 hash
-                hash=\$(sha256sum "\$file" | awk \'{print \$1}\')
-            
-                # Check for empty hash
+            set -e
+    
+            find "${sourceDir}" -type f | while IFS= read -r file; do
+                hash=\$(sha256sum "\$file" | awk '{print \$1}')
                 if [ -z "\$hash" ]; then
                     echo "Warning: Could not compute hash for file: \$file. Skipping." >&2
                     continue
                 fi
-            
-                # Use cut for substring (portable)
                 hash_prefix=\$(echo "\$hash" | cut -c1-8)
                 hash_dec=\$((0x\$hash_prefix))
-            
-                # Compute shard index
                 target_index=\$((hash_dec % ${parallelStageCount}))
-            
-                # Destination dir (hardcoded here)
                 destination_dir="${shardsBasePath}/\${target_index}"
-            
-                # Copy the file
                 cp "\$file" "\$destination_dir/"
             done
         
-            echo "Bulk file distribution complete."'
+            echo "Bulk file distribution complete."
         """)
     }
 }
