@@ -2,19 +2,29 @@ package dev.zucca_ops
 
 class Configuration {
 
-    final String policyPath
-    final String finalReportPath
-    final String valuesFilePath
-    final int parallelStageCount
-    final String manifestSourceDirectory
-    final String extraKyvernoArgs
+    String policyPath
+    String finalReportPath
+    String valuesFilePath
+    int parallelStageCount
+    String manifestSourceDirectory
+    String extraKyvernoArgs
+    String generatedResourcesDir
+    int kyvernoVerbosity
+    String debugLogDir
+
+    final Map paramsConfig
+    final Script steps
 
     private static final Map DEFAULTS = [
             policyPath: './policies',
             finalReportPath: 'final-kyverno-report.yaml',
             valuesFilePath: null,
             parallelStageCount: 4,
-            manifestSourceDirectory: './kustomize-output'
+            manifestSourceDirectory: './kustomize-output',
+            kyvernoVerbosity: 2,
+            generatedResourcesDir: 'generated-resources',
+            extraKyvernoArgs: "",
+            debugLogDir: null
     ].asImmutable()
 
     private static final List FORBIDDEN_ARGS = [
@@ -26,18 +36,23 @@ class Configuration {
      * @param params The map of parameters passed to the pipeline step.
      * @param steps A reference to the pipeline steps object for file I/O.
      */
-    Configuration(Map params, def steps) {
+    Configuration(Map params, Script steps) {
+        this.steps = steps
+        this.paramsConfig = params
+    }
+
+    void loadConfig() {
         def effectiveConfig = new HashMap(DEFAULTS)
 
-        if (params.configFile) {
-            steps.echo "Reading configuration from ${params.configFile}"
-            Map configFromFile = steps.readYaml(file: params.configFile)
+        if (paramsConfig.configFile) {
+            steps.echo "Reading configuration from ${paramsConfig.configFile}"
+            Map configFromFile = steps.readYaml(file: paramsConfig.configFile)
             if (configFromFile) {
                 effectiveConfig.putAll(configFromFile)
             }
         }
 
-        effectiveConfig.putAll(params)
+        effectiveConfig.putAll(paramsConfig)
 
         this.policyPath = effectiveConfig.policyPath
         this.finalReportPath = effectiveConfig.finalReportPath
@@ -45,8 +60,11 @@ class Configuration {
         this.parallelStageCount = effectiveConfig.parallelStageCount as int
         this.manifestSourceDirectory = effectiveConfig.manifestSourceDirectory
         this.extraKyvernoArgs = effectiveConfig.extraKyvernoArgs
+        this.generatedResourcesDir = effectiveConfig.generatedResourcesDir
+        this.kyvernoVerbosity = effectiveConfig.kyvernoVerbosity as int
+        this.debugLogDir = effectiveConfig.debugLogDir
 
-        validate(steps)
+        validate()
     }
 
     /**
@@ -54,7 +72,7 @@ class Configuration {
      * Throws a build-stopping error if any validation fails.
      * @param steps The pipeline steps object to call fileExists() and error().
      */
-    private void validate(def steps) {
+    private void validate() {
 
         // 1. Validate parallelStageCount
         if (this.parallelStageCount <= 0) {
@@ -89,7 +107,6 @@ class Configuration {
                 }
             }
         }
-
 
         steps.echo "Configuration validation successful."
     }

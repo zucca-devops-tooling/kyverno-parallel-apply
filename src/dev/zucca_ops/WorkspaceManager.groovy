@@ -5,6 +5,8 @@ class WorkspaceManager {
     // The root directory for all temporary files for this run.
     private final String workspaceRoot
 
+    private final String baseDirectory
+
     // Use constants for subdirectory names for easy modification.
     private static final String SHARDS_DIR_NAME = 'shards'
     private static final String RESULTS_DIR_NAME = 'results'
@@ -14,22 +16,16 @@ class WorkspaceManager {
      * @param runIdentifier A unique ID for the run, like BUILD_NUMBER, to avoid collisions.
      */
     WorkspaceManager(String baseDirectory, String runIdentifier) {
+        this.baseDirectory = baseDirectory
         // Create a unique root directory for this specific run, e.g., '.workspace/run-42'
-        this.workspaceRoot = Paths.get(baseDirectory, '.workspace', "run-${runIdentifier}").toString()
-    }
-
-    /**
-     * Returns the absolute path to the root of the temporary workspace.
-     */
-    String getWorkspaceRoot() {
-        return this.workspaceRoot
+        this.workspaceRoot = "${baseDirectory}/.workspace/run-${runIdentifier}"
     }
 
     /**
      * Returns the path to the directory that will hold all parallel shard folders.
      */
     String getShardsBaseDirectory() {
-        return Paths.get(this.workspaceRoot, SHARDS_DIR_NAME).toString()
+        return "${this.workspaceRoot}/${SHARDS_DIR_NAME}"
     }
 
     /**
@@ -37,14 +33,44 @@ class WorkspaceManager {
      * This is the method your other functions will call.
      */
     String getShardDirectory(int index) {
-        return Paths.get(getShardsBaseDirectory(), Integer.toString(index)).toString()
+        return "${getShardsBaseDirectory()}/${index}"
+    }
+
+    /**
+     * Returns the absolute path for a specific shard's debug log file.
+     * It intelligently handles both relative and absolute paths provided
+     * by the user in the configuration.
+     *
+     * @param debugLogDir The user-configured directory for debug logs.
+     * @param index The index of the shard (e.g., 0, 1, 2...).
+     * @return The full, absolute path to the log file.
+     */
+    String getShardLogFile(String debugLogDir, int index) {
+        String filename = "shard-${index}-debug.log"
+
+        // The simplest and safest way to check for an absolute path in this context
+        if (isAbsolutePath(debugLogDir)) {
+            // Path is already absolute, just append the filename
+            return "${debugLogDir}/${filename}"
+        } else {
+            // Path is relative, prepend the known absolute path to the workspace root
+            return "${this.baseDirectory}/${debugLogDir}/${filename}"
+        }
     }
 
     /**
      * Returns the path to the directory where final results should be stored.
      */
     String getResultDirectory() {
-        return Paths.get(this.workspaceRoot, RESULTS_DIR_NAME).toString()
+        return "${this.workspaceRoot}/${RESULTS_DIR_NAME}"
+    }
+
+    String getFolder(String folder) {
+        if (isAbsolutePath(folder)) {
+            return folder
+        }
+
+        return "${this.baseDirectory}/${folder}"
     }
 
     /**
@@ -71,5 +97,13 @@ class WorkspaceManager {
         steps.echo "Cleaning up temporary workspace: ${this.workspaceRoot}"
         // Safely remove the entire workspace root directory
         steps.sh "rm -rf ${this.workspaceRoot}"
+    }
+
+    String getRelativePath(String absolutePath) {
+        return absolutePath.replaceFirst("^${this.baseDirectory}/", "")
+    }
+
+    private static boolean isAbsolutePath(String path) {
+        return path.startsWith("/")
     }
 }
