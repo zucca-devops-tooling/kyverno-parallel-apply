@@ -54,7 +54,7 @@ class WorkspaceManager {
             return "${debugLogDir}/${filename}"
         } else {
             // Path is relative, prepend the known absolute path to the workspace root
-            return "${this.workspaceRoot}/${debugLogDir}/${filename}"
+            return "${this.baseDirectory}/${debugLogDir}/${filename}"
         }
     }
 
