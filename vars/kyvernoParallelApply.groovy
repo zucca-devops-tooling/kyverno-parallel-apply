@@ -87,12 +87,16 @@ def call(Map params = [:]) {
                                 ]
 
                                 def command = commandParts.join(' ')
-                                def reportOutput = " > '${shardDir}/report.yaml'"
 
                                 def result = sh(
-                                        script: "${command} ${reportOutput} ${stdErrRedirect}",
+                                        script: "${command} ${stdErrRedirect}",
+                                        returnStdout: true,
                                         returnStatus: true
                                 )
+
+                                def rawOutput = result.stdOut
+
+                                writeFile(file: "${shardDir}/report.yaml", text: rawOutput)
 
                                 def stdErrContent = ""
                                 if (config.debugLogDir && fileExists(workspace.getShardLogFile(config.debugLogDir, shardIndex))) {
