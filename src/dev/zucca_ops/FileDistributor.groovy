@@ -31,8 +31,12 @@ class FileDistributor {
         
                 find "${config.manifestSourceDirectory}" -type f | while IFS= read -r file; do
                     # Get sha256 hash of the file content
-                    # This is the key line that is fixed:
                     hash=\$(sha256sum "\$file" | awk \'{print \$1}\')
+        
+                    if [ -z "\$hash" ]; then
+                        echo "Warning: Could not compute hash for file: \$file. Skipping." >&2
+                        continue
+                    fi
         
                     # Extract first 8 hex chars and convert to decimal
                     hash_dec=\$((0x\${hash:0:8}))
