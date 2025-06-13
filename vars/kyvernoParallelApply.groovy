@@ -38,7 +38,6 @@ def call(Map params = [:]) {
         stage('Setup Parallel Workspace') {
             workspace.createDirectories(this, config.parallelStageCount)
             distributor.distribute()
-            input message: 'Pipeline paused. Run the command via SSH, then click "Proceed" to continue or "Abort" to stop.'
         }
 
         // A map to store the results from each parallel stage
