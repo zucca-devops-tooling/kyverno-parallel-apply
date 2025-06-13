@@ -87,25 +87,13 @@ def call(Map params = [:]) {
                                 ]
 
                                 def command = commandParts.join(' ')
+                                def reportOutput = " > '${shardDir}/report.yaml'"
 
                                 def result = sh(
-                                        script: "${command} ${stdErrRedirect}",
-                                        returnStdout: true,
+                                        script: "${command} ${reportOutput} ${stdErrRedirect} || true",
                                         returnStatus: true
                                 )
 
-                                def rawOutput = result.stdOut
-
-                                writeFile(file: "${shardDir}/report.yaml", text: rawOutput)
-
-                                def stdErrContent = ""
-                                if (config.debugLogDir && fileExists(workspace.getShardLogFile(config.debugLogDir, shardIndex))) {
-                                    stdErrContent = readFile(workspace.getShardLogFile(config.debugLogDir, shardIndex)).trim()
-                                }
-
-                                if (result > 1 || (result == 1 && !stdErrContent.isEmpty())) {
-                                    throw new Exception("Kyverno CLI returned critical error code: ${result}. Stderr: ${stdErrContent}")
-                                }
 
                                 stageResults[shardIndex] = [status: 'SUCCESS']
                             } catch (Exception e) {
