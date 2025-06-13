@@ -55,13 +55,11 @@ class ReportMerger implements Serializable {
      */
     private PolicyReport parseCleanReportFrom(String rawOutput) {
         if (!rawOutput || rawOutput.trim().isEmpty()) {
-            steps.echo "its empty"
             return null
         }
 
         def reportStartIndex = rawOutput.indexOf("apiVersion")
         if (reportStartIndex != -1) {
-            steps.echo "not found"
             def cleanReportYaml = rawOutput.substring(reportStartIndex)
             try {
                 def parsedData = steps.readYaml(text: cleanReportYaml)
