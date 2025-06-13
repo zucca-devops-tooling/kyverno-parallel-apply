@@ -30,6 +30,7 @@ class ReportMerger implements Serializable {
 
                 // Read the entire raw output file, including any log lines.
                 def rawContent = steps.readFile(reportPath)
+                println(rawContent)
 
                 // Use the helper method to clean and parse the content.
                 def partialReport = parseCleanReportFrom(rawContent)
