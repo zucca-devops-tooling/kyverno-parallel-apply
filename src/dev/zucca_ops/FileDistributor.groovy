@@ -15,47 +15,36 @@ class FileDistributor {
     }
 
     /**
-     * This method uses a highly efficient, single shell command to distribute files.
-     * It hashes the *content* of each file to ensure an even, non-clustered distribution.
+     * Finds files in the source directory and distributes them into the shard
+     * directories managed by the WorkspaceManager.
      */
     void distribute() {
         def sourceDir = config.manifestSourceDirectory
-        steps.echo "Distributing files from '${sourceDir}' into ${config.parallelStageCount} shards based on file content..."
+        steps.echo "Distributing files from '${sourceDir}' into ${config.parallelStageCount} shards..."
 
-        // --- THIS IS THE FIX ---
-        // 1. Get the absolute base path for all shard directories from the WorkspaceManager.
-        //    This is done once, outside the script.
-        def shardsBasePath = workspace.getShardsBaseDirectory()
+        def files = steps.findFiles(glob: "${sourceDir}/**/*")
 
-        // 2. This single, multi-line shell script does all the work efficiently.
-        //    It avoids the overhead of calling Jenkins steps in a loop.
-        def bulkDistributeScript = """
-            #!/bin/bash
-            set -e
+        files.each { file ->
+            // Using the file's relative path for the hash is efficient and deterministic.
+            byte[] hashBytes = MessageDigest.getInstance("SHA-256").digest(file.path.getBytes('UTF-8'))
 
-            # Use 'find' to get a list of all files to be processed.
-            find "${sourceDir}" -type f | while IFS= read -r file; do
-                # Use 'sha256sum' to get a hash of the file's CONTENT.
-                hash=\$(sha256sum "\$file" | awk '{print \$1}')
-                
-                # Convert the first 8 hex characters of the hash to a decimal number.
-                hash_dec=\$((0x\${hash:0:8}))
-                
-                # Use shell arithmetic to calculate the target shard index.
-                target_index=\$((hash_dec % ${config.parallelStageCount}))
-                
-                # Construct the destination path using the pre-calculated base path.
-                # This is much cleaner and more correct than the previous version.
-                destination_dir="${shardsBasePath}/\${target_index}"
+            // Convert first 4 bytes of hash to a positive integer
+            long hashInt = ((hashBytes[0] & 0xFF) << 24) |
+                    ((hashBytes[1] & 0xFF) << 16) |
+                    ((hashBytes[2] & 0xFF) << 8)  |
+                    ((hashBytes[3] & 0xFF))
+            hashInt = hashInt & 0xFFFFFFFFL
 
-                cp "\$file" "\$destination_dir/"
-            done
+            int targetIndex = (int) (hashInt % config.parallelStageCount)
 
-            echo "Bulk file distribution complete."
-        """
-        // --- END OF FIX ---
+            // Ask the workspace manager for the correct destination folder
+            def targetDir = workspace.getShardDirectory(targetIndex)
+            def destinationPath = "${targetDir}/${file.name}"
 
-        // Execute the entire distribution logic in one go.
-        steps.sh(bulkDistributeScript)
+            // Use built-in, platform-independent steps to copy the file
+            def content = steps.readFile(file.path)
+            steps.writeFile(file: destinationPath, text: content)
+        }
+        steps.echo "File distribution complete."
     }
 }
