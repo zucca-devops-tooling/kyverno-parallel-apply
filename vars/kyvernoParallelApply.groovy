@@ -89,11 +89,23 @@ def call(Map params = [:]) {
                                 def command = commandParts.join(' ')
                                 def reportOutput = " > '${shardDir}/report.yaml'"
 
-                                def result = sh(
-                                        script: "${command} ${reportOutput} ${stdErrRedirect} || true",
-                                        returnStatus: true
-                                )
+                                sh """
+                                    # Temporarily disable 'exit on error' to allow us to capture the exit code
+                                    set +e
+                                    # Execute the command and redirect the output. The redirection will now complete.
+                                    ${command} ${reportOutput} ${stdErrRedirect}
+                                    # Capture the real exit code of the kyverno command
+                                    EXIT_CODE=\$?
+                                    # Re-enable 'exit on error' for the rest of the script
+                                    set -e
 
+                                    # Now, we intelligently check the exit code.
+                                    # If it's greater than 1, it was a real crash, not a policy violation.
+                                    if [ \$EXIT_CODE -gt 1 ]; then
+                                        echo "Kyverno command failed with a critical error (exit code: \$EXIT_CODE)."
+                                        exit \$EXIT_CODE
+                                    fi
+                                """
 
                                 stageResults[shardIndex] = [status: 'SUCCESS']
                             } catch (Exception e) {
