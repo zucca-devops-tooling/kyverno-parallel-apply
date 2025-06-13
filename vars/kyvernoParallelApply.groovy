@@ -88,7 +88,7 @@ def call(Map params = [:]) {
 
                                 def command = commandParts.join(' ')
                                 def reportOutput = " > '${shardDir}/report.yaml'"
-                                println(command)
+                                println("${command} ${reportOutput} ${stdErrRedirect}")
                                 sh "${command} ${reportOutput} ${stdErrRedirect}"
 
                                 stageResults[shardIndex] = [status: 'SUCCESS']
