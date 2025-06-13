@@ -79,10 +79,10 @@ def call(Map params = [:]) {
                                         "kyverno", "apply",
                                         "'${policyPath}'",
                                         "--resource='${shardDir}'",
-                                        "--audit-warn",
-                                        "--cluster",
                                         "-v ${config.kyvernoVerbosity}",
                                         "-o ${generatedResourcesDir}",
+                                        "${valuesFileCommand}",
+                                        config.extraKyvernoArgs,
                                         "--policy-report"
                                 ]
 
