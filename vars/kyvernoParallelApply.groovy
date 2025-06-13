@@ -75,25 +75,38 @@ def call(Map params = [:]) {
                                         ? " 2> '${workspace.getShardLogFile(config.debugLogDir, shardIndex)}'"
                                         : ""
 
-                                def baseCommand = """
-                                                        kyverno apply \"${policyPath}\"  \
-                                                            -v ${config.kyvernoVerbosity} \
-                                                            -o ${generatedResourcesDir} \
-                                                            --resource \"${shardDir}\" \
-                                                            ${valuesFileCommand} \
-                                                            ${config.extraKyvernoArgs} \
-                                                            --policy-report \
-                                                        """.trim()
-                                def reportOutput = " > \"${shardDir}/report.yaml\""
+                                def commandParts = [
+                                        "kyverno", "apply",
+                                        "'${policyPath}'",
+                                        "--resource='${shardDir}'",
+                                        "--audit-warn",
+                                        "--cluster",
+                                        "-v ${config.kyvernoVerbosity}",
+                                        "-o ${generatedResourcesDir}",
+                                        "--policy-report"
+                                ]
 
-                                // Safely append any extra user-provided arguments.
-                                println("${baseCommand}  ${reportOutput} ${stdErrRedirect}")
-                                sh "${baseCommand}  ${stdErrRedirect}"
+                                def command = commandParts.join(' ')
+                                def reportOutput = " > '${shardDir}/report.yaml'"
+
+                                def result = sh(
+                                        script: "${command} ${reportOutput} ${stdErrRedirect}",
+                                        returnStatus: true
+                                )
+
+                                def stdErrContent = ""
+                                if (config.debugLogDir && fileExists(workspace.getShardLogFile(config.debugLogDir, shardIndex))) {
+                                    stdErrContent = readFile(workspace.getShardLogFile(config.debugLogDir, shardIndex)).trim()
+                                }
+
+                                if (result > 1 || (result == 1 && !stdErrContent.isEmpty())) {
+                                    throw new Exception("Kyverno CLI returned critical error code: ${result}. Stderr: ${stdErrContent}")
+                                }
+
                                 stageResults[shardIndex] = [status: 'SUCCESS']
                             } catch (Exception e) {
                                 // If sh() fails, the exception is caught here.
                                 echo "ERROR: Shard ${shardIndex} failed!"
-                                echo "${e.message}"
                                 stageResults[shardIndex] = [status: 'FAILURE', error: e.message]
                                 // We do NOT re-throw the error, allowing other stages to continue.
                             }
