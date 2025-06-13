@@ -49,7 +49,7 @@ class WorkspaceManager {
         String filename = "shard-${index}-debug.log"
 
         // The simplest and safest way to check for an absolute path in this context
-        if (debugLogDir.startsWith('/')) {
+        if (isAbsolutePath(debugLogDir)) {
             // Path is already absolute, just append the filename
             return "${debugLogDir}/${filename}"
         } else {
@@ -66,7 +66,7 @@ class WorkspaceManager {
     }
 
     String getFolder(String folder) {
-        if (folder.startsWith("/")) {
+        if (isAbsolutePath(folder)) {
             return folder
         }
 
@@ -99,7 +99,11 @@ class WorkspaceManager {
         steps.sh "rm -rf ${this.workspaceRoot}"
     }
 
-    private boolean isAbsolutePath(String path) {
+    String getRelativePath(String absolutePath) {
+        return absolutePath.replaceFirst("^${this.baseDirectory}/", "")
+    }
+
+    private static boolean isAbsolutePath(String path) {
         return path.startsWith("/")
     }
 }

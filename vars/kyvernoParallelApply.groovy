@@ -131,7 +131,7 @@ def call(Map params = [:]) {
             echo "Final merged report created successfully at ${finalReportPath}"
 
             // Archive the final report so it's easily accessible from the Jenkins build page.
-            archiveArtifacts artifacts: finalReportPath, followSymlinks: false
+            archiveArtifacts artifacts: workspace.getRelativePath(finalReportPath), followSymlinks: false
         }
 
         echo "Finalizing build status..."
