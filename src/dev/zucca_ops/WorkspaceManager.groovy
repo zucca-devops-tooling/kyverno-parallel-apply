@@ -28,6 +28,10 @@ class WorkspaceManager {
         return "${this.workspaceRoot}/${SHARDS_DIR_NAME}"
     }
 
+    String getWorkspaceRoot() {
+        return this.workspaceRoot
+    }
+
     /**
      * Returns the path for a specific shard directory, e.g., './.workspace/run-42/shards/0'
      * This is the method your other functions will call.
