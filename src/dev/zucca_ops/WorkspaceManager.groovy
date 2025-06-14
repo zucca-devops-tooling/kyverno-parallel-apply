@@ -44,7 +44,7 @@ class WorkspaceManager {
 		return "${this.workspaceRoot}/${SHARDS_DIR_NAME}"
 	}
 
-	String getWorkspaceRoot() {
+	String getWorkspacePath() {
 		return this.workspaceRoot
 	}
 

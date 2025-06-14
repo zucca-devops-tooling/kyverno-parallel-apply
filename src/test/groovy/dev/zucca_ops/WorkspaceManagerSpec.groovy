@@ -24,7 +24,7 @@ class WorkspaceManagerSpec extends Specification {
 
 	def "should construct correct absolute paths for all managed directories"() {
 		expect: "all path getters return the correct, fully-qualified paths"
-		workspace.getWorkspaceRoot() == '/var/lib/jenkins/workspace/my-job/.workspace/run-42'
+		workspace.getWorkspacePath() == '/var/lib/jenkins/workspace/my-job/.workspace/run-42'
 		workspace.getShardsBaseDirectory() == '/var/lib/jenkins/workspace/my-job/.workspace/run-42/shards'
 		workspace.getShardDirectory(3) == '/var/lib/jenkins/workspace/my-job/.workspace/run-42/shards/3'
 		workspace.getResultDirectory() == '/var/lib/jenkins/workspace/my-job/.workspace/run-42/results'
