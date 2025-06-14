@@ -31,19 +31,18 @@ pipeline {
             }
         }
         stage('Test') {
-                    steps {
-                        script {
-                            setStatus('test','NEUTRAL','Running tests...')
-                            try {
-                                sh "./gradlew test --no-daemon --info"
-                                setStatus('test','SUCCESS','Tests passed')
-                            } catch (Exception e) {
-                                setStatus('test','FAILURE','Tests failed')
-                            }
-                        }
+            steps {
+                script {
+                    setStatus('test','NEUTRAL','Running tests...')
+                    try {
+                        sh "./gradlew test --no-daemon --info"
+                        setStatus('test','SUCCESS','Tests passed')
+                    } catch (Exception e) {
+                        setStatus('test','FAILURE','Tests failed')
                     }
                 }
-        /*
+            }
+        }
         stage('Spotless') {
             steps {
                 script {
@@ -57,32 +56,7 @@ pipeline {
                 }
             }
         }
-        stage('Test') {
-            steps {
-                script {
-                    setStatus('test','NEUTRAL','Running tests...')
-                    try {
-                        sh "./gradlew :kustomtrace:test --no-daemon"
-                        setStatus('test','SUCCESS','Tests passed')
-                    } catch (Exception e) {
-                        setStatus('test','FAILURE','Tests failed')
-                    }
-                }
-            }
-        }
-        stage('Functional tests') {
-            steps {
-                script {
-                    setStatus('functionalTest','NEUTRAL','Running functional tests...')
-                    try {
-                        sh "./gradlew :functional-test:test --no-daemon --info"
-                        setStatus('functionalTest','SUCCESS','Functional test passed')
-                    } catch (Exception e) {
-                        setStatus('functionalTest','FAILURE','Functional test failed')
-                    }
-                }
-            }
-        }
+        /*
         stage('Tag') {
             when {
                 allOf{
