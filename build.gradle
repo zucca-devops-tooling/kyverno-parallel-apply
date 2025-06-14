@@ -17,13 +17,14 @@ ext {
     junitVersion = '4.13.2'
 }
 
+version = '1.0.0'
+
 dependencies {
     implementation "org.codehaus.groovy:groovy-all:${groovyVersion}"
 
     testImplementation "org.spockframework:spock-core:${spockVersion}"
     testImplementation "com.lesfurets:jenkins-pipeline-unit:${jenkinsPipelineUnitVersion}"
 
-    testImplementation 'net.bytebuddy:byte-buddy:1.14.12'
     testImplementation "junit:junit:${junitVersion}"
 }
 
@@ -74,5 +75,19 @@ spotless {
  */
 
 """
+    }
+}
+
+tasks.register("tagRelease") {
+    group = "release"
+    description = "Tags the current version from build.gradle.kts in Git"
+
+    doLast {
+        def version = project.version.toString()
+        def tagName = "v$version"
+
+        exec {
+            commandLine("git", "tag", "-a", tagName, "-m", "Release $tagName")
+        }
     }
 }

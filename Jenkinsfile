@@ -56,7 +56,6 @@ pipeline {
                 }
             }
         }
-        /*
         stage('Tag') {
             when {
                 allOf{
@@ -71,7 +70,6 @@ pipeline {
                 sh './gradlew tagRelease'
             }
         }
-        */
     }
 }
 
