@@ -1,5 +1,6 @@
 import dev.zucca_ops.Configuration
 import dev.zucca_ops.FileDistributor
+import dev.zucca_ops.KyvernoRunner
 import dev.zucca_ops.ReportMerger
 import dev.zucca_ops.WorkspaceManager
 
@@ -68,42 +69,14 @@ def call(Map params = [:]) {
                 parallelStages["Shard ${shardIndex}"] = {
                     node {
                         stage("Apply on Shard ${shardIndex}") {
-                            try {
-                                def shardDir = workspace.getShardDirectory(shardIndex)
-
-                                def stdErrRedirect = config.debugLogDir != null
-                                        ? " 2> '${workspace.getShardLogFile(config.debugLogDir, shardIndex)}'"
-                                        : ""
-
-                                def commandParts = [
-                                        "kyverno", "apply",
-                                        "'${policyPath}'",
-                                        "--resource='${shardDir}'",
-                                        "-v ${config.kyvernoVerbosity}",
-                                        "-o ${generatedResourcesDir}",
-                                        "${valuesFileCommand}",
-                                        config.extraKyvernoArgs,
-                                        "--policy-report"
-                                ]
-
-                                def command = commandParts.join(' ')
-                                def reportOutput = " > '${shardDir}/report.yaml'"
-                                println("${command} ${reportOutput} ${stdErrRedirect}")
-                                sh "${command} ${reportOutput} ${stdErrRedirect}"
-
-                                stageResults[shardIndex] = [status: 'SUCCESS']
-                            } catch (Exception e) {
-                                // If sh() fails, the exception is caught here.
-                                echo "ERROR: Shard ${shardIndex} failed!"
-                                stageResults[shardIndex] = [status: 'FAILURE', error: e.message]
-                                // We do NOT re-throw the error, allowing other stages to continue.
-                            }
+                            KyvernoRunner runner = new KyvernoRunner(config, workspace, shardIndex, this)
+                            return runner.run()
                         }
                     }
                 }
             }
 
-            parallel(parallelStages)
+            stageResults = parallel(parallelStages)
 
             echo "All parallel stages complete. Analyzing results..."
             stageResults.each { index, result ->
