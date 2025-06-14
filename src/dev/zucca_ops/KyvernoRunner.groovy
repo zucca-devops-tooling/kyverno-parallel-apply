@@ -7,12 +7,12 @@ package dev.zucca_ops
  */
 class KyvernoRunner {
 
-    private final Configuration config
-    private final WorkspaceManager workspace
+    private final def config
+    private final def workspace
     private final int shardIndex
     private final def steps
 
-    KyvernoRunner(Configuration config, WorkspaceManager workspace, int shardIndex, Script steps) {
+    KyvernoRunner(def config, def workspace, int shardIndex, def steps) {
         this.config = config
         this.workspace = workspace
         this.shardIndex = shardIndex
