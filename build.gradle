@@ -1,5 +1,6 @@
 plugins {
     id 'groovy'
+    id 'com.diffplug.spotless' version '6.25.0'
 }
 
 repositories {
@@ -16,13 +17,14 @@ ext {
     junitVersion = '4.13.2'
 }
 
+version = '1.0.0'
+
 dependencies {
     implementation "org.codehaus.groovy:groovy-all:${groovyVersion}"
 
     testImplementation "org.spockframework:spock-core:${spockVersion}"
     testImplementation "com.lesfurets:jenkins-pipeline-unit:${jenkinsPipelineUnitVersion}"
 
-    testImplementation 'net.bytebuddy:byte-buddy:1.14.12'
     testImplementation "junit:junit:${junitVersion}"
 }
 
@@ -48,4 +50,44 @@ tasks.withType(Test).configureEach {
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
+}
+
+spotless {
+    // Configure formatting for Groovy files
+    groovy {
+        target 'src/**/*.groovy', 'vars/**/*.groovy'
+        targetExclude 'src/test/**'
+        greclipse()
+        licenseHeader """/*
+ * Copyright 2025 GuidoZuccarelli
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+"""
+    }
+}
+
+tasks.register("tagRelease") {
+    group = "release"
+    description = "Tags the current version from build.gradle.kts in Git"
+
+    doLast {
+        def version = project.version.toString()
+        def tagName = "v$version"
+
+        exec {
+            commandLine("git", "tag", "-a", tagName, "-m", "Release $tagName")
+        }
+    }
 }
