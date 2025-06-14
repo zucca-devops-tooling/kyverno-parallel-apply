@@ -21,6 +21,8 @@ dependencies {
 
     testImplementation "org.spockframework:spock-core:${spockVersion}"
     testImplementation "com.lesfurets:jenkins-pipeline-unit:${jenkinsPipelineUnitVersion}"
+
+    testImplementation 'net.bytebuddy:byte-buddy:1.14.12'
     testImplementation "junit:junit:${junitVersion}"
 }
 
@@ -28,6 +30,12 @@ sourceSets {
     main {
         groovy {
             srcDirs = ['src', 'vars']
+            exclude 'test/**'
+        }
+    }
+    test {
+        groovy {
+            srcDirs = ['src/test/groovy']
         }
     }
 }

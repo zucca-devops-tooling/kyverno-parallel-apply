@@ -30,6 +30,19 @@ pipeline {
                 }
             }
         }
+        stage('Test') {
+                    steps {
+                        script {
+                            setStatus('test','NEUTRAL','Running tests...')
+                            try {
+                                sh "./gradlew test --no-daemon --info"
+                                setStatus('test','SUCCESS','Tests passed')
+                            } catch (Exception e) {
+                                setStatus('test','FAILURE','Tests failed')
+                            }
+                        }
+                    }
+                }
         /*
         stage('Spotless') {
             steps {

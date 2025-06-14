@@ -13,7 +13,7 @@ class Configuration {
     String debugLogDir
 
     final Map paramsConfig
-    final Script steps
+    final Object steps
 
     private static final Map DEFAULTS = [
             policyPath: './policies',
@@ -36,7 +36,7 @@ class Configuration {
      * @param params The map of parameters passed to the pipeline step.
      * @param steps A reference to the pipeline steps object for file I/O.
      */
-    Configuration(Map params, Script steps) {
+    Configuration(Map params, def steps) {
         this.steps = steps
         this.paramsConfig = params
     }
