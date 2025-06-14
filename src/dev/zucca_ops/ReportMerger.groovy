@@ -2,10 +2,14 @@ package dev.zucca_ops
 
 class ReportMerger implements Serializable {
 
-    private final WorkspaceManager workspace
+    private final def workspace
     private final def steps
 
-    ReportMerger(WorkspaceManager workspace, def steps) {
+    /**
+     * @param workspace A WorkspaceManager
+     * @param steps The pipeline steps provider
+     */
+    ReportMerger(def workspace, def steps) {
         this.workspace = workspace
         this.steps = steps
     }
