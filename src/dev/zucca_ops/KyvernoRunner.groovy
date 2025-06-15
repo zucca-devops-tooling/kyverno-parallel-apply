@@ -80,7 +80,7 @@ class KyvernoRunner implements Serializable {
 			]
 
 			def command = commandParts.join(' ')
-			def reportOutput = " > '${shardDir}/report.yaml'"
+			def reportOutput = " > '${workspace.getShardDirectory(shardIndex)}/report.yaml'"
 
 			// Execute the final command. If this sh step fails, the try/catch block will handle it.
 			steps.sh "${command} ${reportOutput} ${stdErrRedirect}"
