@@ -16,11 +16,17 @@
 
 package dev.zucca_ops
 
-class WorkspaceManager {
+/**
+ * Manages the temporary directory structure used during the parallel execution.
+ * This class is the single source of truth for all temporary paths, ensuring
+ * that file operations are consistent and contained within a unique, cleanable workspace.
+ */
+class WorkspaceManager implements Serializable {
 
 	// The root directory for all temporary files for this run.
 	private final String workspaceRoot
 
+	// The absolute path of the Jenkins workspace, used for path calculations.
 	private final String baseDirectory
 
 	// Use constants for subdirectory names for easy modification.
@@ -38,14 +44,17 @@ class WorkspaceManager {
 	}
 
 	/**
+	 * Returns the absolute path to the root of the temporary workspace.
+	 */
+	String getWorkspacePath() {
+		return this.workspaceRoot
+	}
+
+	/**
 	 * Returns the path to the directory that will hold all parallel shard folders.
 	 */
 	String getShardsBaseDirectory() {
 		return "${this.workspaceRoot}/${SHARDS_DIR_NAME}"
-	}
-
-	String getWorkspacePath() {
-		return this.workspaceRoot
 	}
 
 	/**
@@ -85,11 +94,17 @@ class WorkspaceManager {
 		return "${this.workspaceRoot}/${RESULTS_DIR_NAME}"
 	}
 
+	/**
+	 * Converts a potentially relative path into a full, absolute path based
+	 * on the Jenkins workspace directory. If the path is already absolute,
+	 * it is returned unchanged.
+	 * @param folder The path to make absolute.
+	 * @return The absolute path as a String.
+	 */
 	String getFolder(String folder) {
 		if (isAbsolutePath(folder)) {
 			return folder
 		}
-
 		return "${this.baseDirectory}/${folder}"
 	}
 
@@ -119,11 +134,20 @@ class WorkspaceManager {
 		steps.sh "rm -rf ${this.workspaceRoot}"
 	}
 
+	/**
+	 * Converts an absolute path into a path relative to the Jenkins workspace root.
+	 * This is required for steps like 'archiveArtifacts'.
+	 * @param absolutePath The full path to a file or directory.
+	 * @return The path relative to the workspace.
+	 */
 	String getRelativePath(String absolutePath) {
 		return absolutePath.replaceFirst("^${this.baseDirectory}/", "")
 	}
 
+	/**
+	 * Private helper to check if a path string is absolute.
+	 */
 	private static boolean isAbsolutePath(String path) {
-		return path.startsWith("/")
+		return path != null && path.startsWith("/")
 	}
 }

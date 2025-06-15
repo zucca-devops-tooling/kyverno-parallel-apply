@@ -18,16 +18,24 @@ package dev.zucca_ops
 
 /**
  * This class is responsible for running the 'kyverno apply' command for a single shard.
- * It encapsulates the logic for command construction and execution, based on the user's
- * excellent design suggestion. It is designed to be called from a parallel stage.
+ * It encapsulates all the logic for command construction and execution, based on the
+ * user's excellent design. It is designed to be instantiated and called from within a
+ * parallel stage in a Jenkins Pipeline.
  */
-class KyvernoRunner {
+class KyvernoRunner implements Serializable {
 
 	private final def config
 	private final def workspace
 	private final int shardIndex
 	private final def steps
 
+	/**
+	 * Constructor for the KyvernoRunner.
+	 * @param config The fully resolved Configuration object for this run.
+	 * @param workspace The WorkspaceManager object that provides all necessary paths.
+	 * @param shardIndex The integer index of the parallel shard this runner is responsible for.
+	 * @param steps The Jenkins pipeline steps provider, used to execute commands like 'sh'.
+	 */
 	KyvernoRunner(def config, def workspace, int shardIndex, def steps) {
 		this.config = config
 		this.workspace = workspace
@@ -36,12 +44,15 @@ class KyvernoRunner {
 	}
 
 	/**
-	 * Executes the kyverno apply command for the configured shard.
-	 * This method contains the exact logic from the user's parallel stage.
+	 * Executes the 'kyverno apply' command for the configured shard. It builds the
+	 * command string with all user-configured options, executes it, redirects
+	 * output and error streams, and returns a map indicating the success or failure
+	 * of the operation.
+	 * @return A Map with a 'status' key ('SUCCESS' or 'FAILURE') and an optional 'error' message.
 	 */
 	Map run() {
 		try {
-			def shardDir = workspace.getShardDirectory(shardIndex)
+			def shardDir = config.parallelStageCount > 1 ? workspace.getShardDirectory(shardIndex) : config.manifestSourceDirectory
 			def policyPath = workspace.getFolder(config.policyPath)
 			def generatedResourcesDir = workspace.getFolder(config.generatedResourcesDir)
 
@@ -53,7 +64,7 @@ class KyvernoRunner {
 					? " 2> '${workspace.getShardLogFile(config.debugLogDir, shardIndex)}'"
 					: ""
 
-			// Build the command parts exactly as specified.
+			// Build the command parts exactly as specified by the user.
 			def commandParts = [
 				"kyverno",
 				"apply",
@@ -69,8 +80,7 @@ class KyvernoRunner {
 			def command = commandParts.join(' ')
 			def reportOutput = " > '${shardDir}/report.yaml'"
 
-			// Execute the final command. If this sh step fails, it will throw an
-			// exception that can be caught by the calling parallel stage.
+			// Execute the final command. If this sh step fails, the try/catch block will handle it.
 			steps.sh "${command} ${reportOutput} ${stdErrRedirect}"
 
 			return [status: 'SUCCESS']
@@ -78,7 +88,6 @@ class KyvernoRunner {
 			// If sh() fails, the exception is caught here.
 			steps.echo "ERROR: Shard ${shardIndex} failed!"
 			return [status: 'FAILURE', error: e.message]
-			// We do NOT re-throw the error, allowing other stages to continue.
 		}
 	}
 }
