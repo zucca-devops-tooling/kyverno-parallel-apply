@@ -77,17 +77,3 @@ spotless {
 """
     }
 }
-
-tasks.register("tagRelease") {
-    group = "release"
-    description = "Tags the current version from build.gradle.kts in Git"
-
-    doLast {
-        def version = project.version.toString()
-        def tagName = "v$version"
-
-        exec {
-            commandLine("git", "tag", "-a", tagName, "-m", "Release $tagName")
-        }
-    }
-}
