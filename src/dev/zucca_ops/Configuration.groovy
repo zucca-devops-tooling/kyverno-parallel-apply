@@ -114,10 +114,6 @@ class Configuration implements Serializable {
 	private void validate() {
 		steps.echo "Validating configuration..."
 
-		if (paramsConfig.configFile && !steps.fileExists(paramsConfig.configFile)) {
-			steps.error("Configuration Error: The specified configFile '${paramsConfig.configFile}' does not exist.")
-		}
-
 		if (this.parallelStageCount <= 0) {
 			steps.error("Configuration Error: 'parallelStageCount' must be a positive number, but got '${this.parallelStageCount}'.")
 		}

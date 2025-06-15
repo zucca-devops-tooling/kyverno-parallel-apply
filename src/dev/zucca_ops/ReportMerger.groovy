@@ -83,7 +83,7 @@ class ReportMerger implements Serializable {
 			return null
 		}
 
-		def reportStartIndex = rawOutput.indexOf("apiVersion:")
+		def reportStartIndex = rawOutput.indexOf("apiVersion")
 		if (reportStartIndex != -1) {
 			def cleanReportYaml = rawOutput.substring(reportStartIndex)
 			try {
