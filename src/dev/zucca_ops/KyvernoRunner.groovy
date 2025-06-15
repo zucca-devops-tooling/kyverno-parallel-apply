@@ -52,7 +52,9 @@ class KyvernoRunner implements Serializable {
 	 */
 	Map run() {
 		try {
-			def shardDir = config.parallelStageCount > 1 ? workspace.getShardDirectory(shardIndex) : config.manifestSourceDirectory
+			def shardDir = config.parallelStageCount > 1
+					? workspace.getShardDirectory(shardIndex)
+					: workspace.getFolder(config.manifestSourceDirectory)
 			def policyPath = workspace.getFolder(config.policyPath)
 			def generatedResourcesDir = workspace.getFolder(config.generatedResourcesDir)
 
