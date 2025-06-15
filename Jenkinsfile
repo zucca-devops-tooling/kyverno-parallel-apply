@@ -2,7 +2,9 @@ pipeline {
     agent any
 
     environment {
-        GRADLE_OPTS = '-Dorg.gradle.jvmargs="-Xmx2g -XX:+HeapDumpOnOutOfMemoryError"'
+        GRADLE_OPTS = '-Dorg.gradle.jvmargs="-Xmx2g -XX:+HeapDumpOnOutOfMemoryError"''
+
+        GH_CREDENTIALS  = credentials('GITHUB_PACKAGES')
     }
 
     stages {
@@ -56,7 +58,7 @@ pipeline {
                 }
             }
         }
-        stage('Tag') {
+        stage('Release') {
             when {
                 allOf{
                     expression {
@@ -67,7 +69,29 @@ pipeline {
                 }
             }
             steps {
-                sh './gradlew tagRelease'
+                script {
+                    releaseVersion = sh(script: "./gradlew properties -q -Pquiet | grep '^version:' | awk '{print \$2}'", returnStdout: true).trim()
+                    echo "Read project version for release: ${releaseVersion}"
+
+                    def changelogNotes = sh(script: """
+                        awk '/^## \\[${releaseVersion}\\]/{flag=1; next} /^## \\[/{flag=0} flag' CHANGELOG.md
+                    """, returnStdout: true).trim()
+
+                    if (changelogNotes.isEmpty()) {
+                        changelogNotes = "No specific changelog notes found for this version."
+                    }
+
+                    def tagName = "v${releaseVersion}"
+                    sh "git push https://$GH_CREDENTIALS_USR:$GH_CREDENTIALS_PSW@github.com/zucca-devops-tooling/kyverno-parallel-apply.git ${tagName}"
+
+                    sh """
+                        export GH_TOKEN="$GH_CREDENTIALS_PSW"
+                        gh release create ${tagName} \\
+                            --title "Release ${tagName}" \\
+                            --notes "${changelogNotes}"
+                    """
+                    echo "GitHub Release ${tagName} created."
+                }
             }
         }
     }
