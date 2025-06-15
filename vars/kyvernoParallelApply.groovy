@@ -64,11 +64,7 @@ def call(Map params = [:]) {
 		stage('Parallel Kyverno Apply') {
 			def parallelStages = [:]
 
-			def policyPath = workspace.getFolder(config.policyPath)
 			def generatedResourcesDir = workspace.getFolder(config.generatedResourcesDir)
-			def valuesFileCommand = config.valuesFilePath != null
-					? " --values-file '${workspace.getFolder(config.valuesFilePath)}'"
-					: ""
 
 			if (config.debugLogDir) {
 				sh "mkdir -p ${workspace.getFolder(config.debugLogDir)}"
