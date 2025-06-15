@@ -42,22 +42,22 @@ class Configuration implements Serializable {
 
 	// Defines all default values for the configuration parameters.
 	private static final Map DEFAULTS = [
-			policyPath: './policies',
-			finalReportPath: 'final-kyverno-report.yaml',
-			valuesFilePath: null,
-			parallelStageCount: 4,
-			manifestSourceDirectory: './kustomize-output',
-			kyvernoVerbosity: 2,
-			generatedResourcesDir: 'generated-resources',
-			extraKyvernoArgs: "",
-			debugLogDir: null,
-			failFast: false
+		policyPath: './policies',
+		finalReportPath: 'final-kyverno-report.yaml',
+		valuesFilePath: null,
+		parallelStageCount: 4,
+		manifestSourceDirectory: './kustomize-output',
+		kyvernoVerbosity: 2,
+		generatedResourcesDir: 'generated-resources',
+		extraKyvernoArgs: "",
+		debugLogDir: null,
+		failFast: false
 	].asImmutable()
 
 	// Defines a list of arguments that are forbidden from being passed via extraKyvernoArgs.
 	private static final List FORBIDDEN_ARGS = [
-			'-o',
-			'--output' // These flags change the output format and will break report merging.
+		'-o',
+		'--output' // These flags change the output format and will break report merging.
 	]
 
 	/**
