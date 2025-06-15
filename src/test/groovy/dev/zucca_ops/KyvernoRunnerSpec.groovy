@@ -25,6 +25,7 @@ class KyvernoRunnerSpec extends Specification {
 				valuesFilePath: null,
 				kyvernoVerbosity: 2,
 				extraKyvernoArgs: "",
+				parallelStageCount: 2,
 				debugLogDir: null
 				)
 

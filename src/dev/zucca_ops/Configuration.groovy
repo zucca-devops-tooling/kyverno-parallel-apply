@@ -16,8 +16,15 @@
 
 package dev.zucca_ops
 
-class Configuration {
+/**
+ * Manages all user-provided and default parameters for the library.
+ * It resolves the final configuration by layering defaults, values from a
+ * config file, and direct parameters. It also performs upfront validation
+ * to ensure the library is correctly configured before execution.
+ */
+class Configuration implements Serializable {
 
+	// --- Properties to hold the final resolved configuration ---
 	String policyPath
 	String finalReportPath
 	String valuesFilePath
@@ -27,10 +34,13 @@ class Configuration {
 	String generatedResourcesDir
 	int kyvernoVerbosity
 	String debugLogDir
+	boolean failFast // Added based on earlier discussion
 
+	// These properties hold the initial state passed to the constructor.
 	final Map paramsConfig
-	final Object steps
+	final def steps
 
+	// Defines all default values for the configuration parameters.
 	private static final Map DEFAULTS = [
 		policyPath: './policies',
 		finalReportPath: 'final-kyverno-report.yaml',
@@ -40,29 +50,38 @@ class Configuration {
 		kyvernoVerbosity: 2,
 		generatedResourcesDir: 'generated-resources',
 		extraKyvernoArgs: "",
-		debugLogDir: null
+		debugLogDir: null,
+		failFast: false
 	].asImmutable()
 
+	// Defines a list of arguments that are forbidden from being passed via extraKyvernoArgs.
 	private static final List FORBIDDEN_ARGS = [
 		'-o',
 		'--output' // These flags change the output format and will break report merging.
 	]
 
 	/**
-	 * Constructor that resolves the final configuration.
-	 * @param params The map of parameters passed to the pipeline step.
-	 * @param steps A reference to the pipeline steps object for file I/O.
+	 * Constructor that stores the initial parameters and the Jenkins steps provider.
+	 * @param params The map of parameters passed from the main library call.
+	 * @param steps A reference to the pipeline steps provider for file I/O and other operations.
 	 */
 	Configuration(Map params, def steps) {
 		this.steps = steps
 		this.paramsConfig = params
 	}
 
+	/**
+	 * Loads and resolves the final configuration. This method applies defaults,
+	 * merges values from a user-specified YAML config file, and then merges
+	 * any direct parameters, which have the highest precedence. Finally, it
+	 * triggers validation.
+	 */
 	void loadConfig() {
 		def effectiveConfig = new HashMap(DEFAULTS)
 
 		if (paramsConfig.configFile) {
 			steps.echo "Reading configuration from ${paramsConfig.configFile}"
+			// This check should happen in validate() to ensure steps are called safely
 			Map configFromFile = steps.readYaml(file: paramsConfig.configFile)
 			if (configFromFile) {
 				effectiveConfig.putAll(configFromFile)
@@ -71,53 +90,49 @@ class Configuration {
 
 		effectiveConfig.putAll(paramsConfig)
 
+		// Assign all properties from the final effective configuration map.
 		this.policyPath = effectiveConfig.policyPath
 		this.finalReportPath = effectiveConfig.finalReportPath
 		this.valuesFilePath = effectiveConfig.valuesFilePath
 		this.parallelStageCount = effectiveConfig.parallelStageCount as int
 		this.manifestSourceDirectory = effectiveConfig.manifestSourceDirectory
-		this.extraKyvernoArgs = effectiveConfig.extraKyvernoArgs
+		this.extraKyvernoArgs = effectiveConfig.extraKyvernoArgs ?: "" // Ensure not null
 		this.generatedResourcesDir = effectiveConfig.generatedResourcesDir
 		this.kyvernoVerbosity = effectiveConfig.kyvernoVerbosity as int
 		this.debugLogDir = effectiveConfig.debugLogDir
+		this.failFast = effectiveConfig.failFast as boolean
 
 		validate()
 	}
 
 	/**
-	 * Private helper method to validate the state of the configuration.
-	 * Throws a build-stopping error if any validation fails.
-	 * @param steps The pipeline steps object to call fileExists() and error().
+	 * Validates the final state of the configuration to ensure the library
+	 * can run safely. It checks for the existence of required files/directories
+	 * and ensures parameter values are within valid ranges. Throws a build-stopping
+	 * error if any validation fails.
 	 */
 	private void validate() {
+		steps.echo "Validating configuration..."
 
-		// 1. Validate parallelStageCount
 		if (this.parallelStageCount <= 0) {
 			steps.error("Configuration Error: 'parallelStageCount' must be a positive number, but got '${this.parallelStageCount}'.")
 		}
 
-		// 2. Validate manifestSourceDirectory
 		if (!steps.fileExists(this.manifestSourceDirectory)) {
 			steps.error("Configuration Error: The 'manifestSourceDirectory' you provided at '${this.manifestSourceDirectory}' does not exist.")
 		}
 
-		// 3. Validate policyPath
 		if (!steps.fileExists(this.policyPath)) {
 			steps.error("Configuration Error: The 'policyPath' you provided at '${this.policyPath}' does not exist.")
 		}
 
-		// 4. Validate valuesFilePath (only if it was provided)
-		if (this.valuesFilePath) {
-			if (!steps.fileExists(this.valuesFilePath)) {
-				steps.error("Configuration Error: The 'valuesFilePath' you provided at '${this.valuesFilePath}' does not exist.")
-			}
+		if (this.valuesFilePath && !steps.fileExists(this.valuesFilePath)) {
+			steps.error("Configuration Error: The 'valuesFilePath' you provided at '${this.valuesFilePath}' does not exist.")
 		}
 
-		// 5. Validate the extraKyvernoArgs to prevent dangerous flags
+		// Validate the extraKyvernoArgs to prevent dangerous flags
 		if (this.extraKyvernoArgs) {
-			// Split the args string into a list of individual flags
 			def providedArgs = this.extraKyvernoArgs.tokenize(' ')
-
 			for (String forbidden : FORBIDDEN_ARGS) {
 				if (forbidden in providedArgs) {
 					steps.error("Configuration Error: The 'extraKyvernoArgs' contains a forbidden flag ('${forbidden}'). Flags that alter the output format are not allowed.")
