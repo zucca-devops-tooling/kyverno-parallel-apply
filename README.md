@@ -1,65 +1,96 @@
 # Kyverno Parallel Apply Jenkins Shared Library
 
-This repository contains `kyverno-parallel-apply`, a Jenkins Shared Library designed to solve a critical performance bottleneck in CI/CD pipelines by parallelizing the execution of `kyverno apply`.
+`kyverno-parallel-apply` is a Jenkins Shared Library that speeds up large `kyverno apply` runs by splitting a manifest directory into shards, running Kyverno in parallel, and merging the shard reports into a single final policy report.
 
-The library automates the sharding of Kubernetes manifests, runs `kyverno apply` concurrently across multiple Jenkins agent executors, and aggregates the results into a single, clean policy report.
+It is aimed at CI pipelines that already produce a large folder of rendered Kubernetes manifests and want faster policy evaluation without having to build the orchestration logic in every `Jenkinsfile`.
 
-## Live Demonstration
+## What The Library Does
 
-A full, working implementation of this library, alongside its companion tool **[kustom-trace](https://github.com/zucca-devops-tooling/kustom-trace)**, can be found in the demo repository here:
+For each invocation, the library:
 
-* **[https://github.com/zucca-devops-tooling/kustomize-at-scale-demo](https://github.com/zucca-devops-tooling/kustomize-at-scale-demo)**
+1. Validates the input configuration.
+2. Creates a temporary workspace under `.workspace/run-<BUILD_NUMBER>`.
+3. Distributes manifest files across shard directories using a content hash.
+4. Runs `kyverno apply` once per shard in parallel.
+5. Merges the partial policy reports into one final report.
+6. Archives the merged report as a Jenkins build artifact.
 
-This demo showcases how to use the library to test a large and complex set of real-world Kubernetes resources and highlights the significant performance improvements achieved through parallelism.
+## Requirements
 
----
+Before using the library, make sure the Jenkins environment provides:
 
-## Getting Started
+- A Jenkins Shared Library entry pointing to this repository.
+- A Unix-like agent environment. The library uses `sh`, `find`, `cp`, `mkdir`, `rm`, `sha256sum`, `awk`, and `cut`.
+- The `kyverno` CLI available on `PATH` for the executors that run the parallel stages.
+- The Pipeline Utility Steps plugin, because the library uses `readYaml` and `writeYaml`.
+- Parallel executors that can access the same absolute workspace path created during the setup stage. The library does not use `stash` or `unstash`.
 
-### 🔧 Quick Start (Default Config)
+## Installation In Jenkins
 
-For a simple setup, you can call the library with no parameters. It will use the default values for all options (e.g., look for policies in `./policies` and resources in `./kustomize-output`).
+Configure the library in `Manage Jenkins` -> `Configure System` -> `Global Pipeline Libraries`.
+
+- Name: `kyverno-parallel-apply`
+- Default version: pin a tag for production use, for example `v1.0.0`
+- Retrieval method: Git
+- Project repository: this repository URL
+
+If you need background on library setup, see the [Jenkins Shared Library documentation](https://www.jenkins.io/doc/book/pipeline/shared-libraries/).
+
+## Quick Start
+
+With the default configuration, the library expects:
+
+- manifests in `./kustomize-output`
+- policies in `./policies`
+
+Example:
 
 ```groovy
-@Library('kyverno-parallel-apply@v1.0.0') _
-
-// ... inside a pipeline stage ...
-script {
-    kyvernoParallelApply()
-}
-```
-
-### Jenkins Installation
-
-To use this library, a Jenkins administrator must configure it under **Manage Jenkins** -> **Configure System** -> **Global Pipeline Libraries**. For more information on how shared libraries work, please see the official [Jenkins Shared Library Documentation](https://www.jenkins.io/doc/book/pipeline/shared-libraries/).
-
-* **Name:** `kyverno-parallel-apply` (or a name of your choice).
-* **Default version:** A specific Git tag is recommended for production use (e.g., `v1.0.0`).
-* **Source Code Management:** Git.
-* **Project Repository:** The URL of this Git repository.
-
-### Usage in `Jenkinsfile`
-
-Once installed, import the library and call it from a `script` block within one of your pipeline stages.
-
-```groovy
-// At the top of your Jenkinsfile
 @Library('kyverno-parallel-apply@v1.0.0') _
 
 pipeline {
     agent any
-    
-    stages {
-        // ... previous stages for checking out code, building manifests, etc. ...
 
-        stage('Parallel Kyverno Scan') {
+    stages {
+        stage('Kyverno Scan') {
             steps {
                 script {
-                    // Call the library with your desired configuration
+                    kyvernoParallelApply()
+                }
+            }
+        }
+    }
+}
+```
+
+## Typical Usage
+
+```groovy
+@Library('kyverno-parallel-apply@v1.0.0') _
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Render Manifests') {
+            steps {
+                sh '''
+                    mkdir -p kustomize-output
+                    kustomize build overlays/dev > kustomize-output/all.yaml
+                '''
+            }
+        }
+
+        stage('Parallel Kyverno Apply') {
+            steps {
+                script {
                     kyvernoParallelApply(
                         manifestSourceDirectory: 'path/to/kustomize-output',
-                        policyPath:              'path/to/policies',
-                        parallelStageCount:      8
+                        policyPath: 'path/to/policies',
+                        parallelStageCount: 8,
+                        extraKyvernoArgs: '--cluster --audit-warn',
+                        valuesFilePath: 'path/to/values.yaml',
+                        debugLogDir: 'logs/kyverno'
                     )
                 }
             }
@@ -68,54 +99,91 @@ pipeline {
 }
 ```
 
----
+## Configuration
 
-## Configuration Reference
+You can pass configuration directly from the `Jenkinsfile`, or load it from a YAML file with `configFile`.
 
-The library can be configured by passing parameters directly in the `Jenkinsfile` or by providing a path to a YAML configuration file.
+Precedence is:
 
-### Configuration via File
+1. Built-in defaults
+2. Values loaded from `configFile`
+3. Values passed directly to `kyvernoParallelApply(...)`
 
-You can manage all configuration in a central `configFile`. This is useful for keeping your `Jenkinsfile` clean.
+### Configuration File Example
 
-**Example `config.yaml`:**
 ```yaml
-# ci/config.yaml
-manifestSourceDirectory: "kustomize-output/"
-policyPath: "policies/"
+# ci/kyverno-parallel.yaml
+manifestSourceDirectory: "kustomize-output"
+policyPath: "policies"
 parallelStageCount: 8
-extraKyvernoArgs: "--cluster"
-debugLogDir: "logs/debug"
+extraKyvernoArgs: "--cluster --audit-warn"
+valuesFilePath: "kyverno/values.yaml"
+debugLogDir: "logs/kyverno"
+generatedResourcesDir: "generated-resources"
+kyvernoVerbosity: 2
 ```
 
-**`Jenkinsfile` Usage:**
 ```groovy
-// The library will load all values from the specified file.
-kyvernoParallelApply(configFile: 'ci/config.yaml')
+kyvernoParallelApply(configFile: 'ci/kyverno-parallel.yaml')
+```
 
-// You can still override specific values from the file.
-// In this case, failFast will be true, but all other values come from the file.
+Direct parameters still win over values from the file:
+
+```groovy
 kyvernoParallelApply(
-    configFile: 'ci/config.yaml',
-    failFast: true
+    configFile: 'ci/kyverno-parallel.yaml',
+    parallelStageCount: 12
 )
 ```
-> **Note:** Any parameters passed directly in the `kyvernoParallelApply` map will always take precedence over values defined in the `configFile`.
 
-### All Parameters
+### Supported Parameters
 
-All parameters are optional.
+All parameters below are optional.
 
-| Parameter | Type | Default Value | Description |
+| Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `manifestSourceDirectory`| `String` | `./kustomize-output` | The path to the directory containing the Kubernetes manifest files to be scanned. |
-| `policyPath` | `String` | `./policies` | The path to the file or directory containing the Kyverno policies to apply. |
-| `generatedResourcesDir` | `String` | `null` | **If provided**, all mutated/generated resources from Kyverno will be saved to this directory. If omitted, they are not saved. |
-| `debugLogDir` | `String` | `null` | **If provided**, all `stderr` logs from each parallel Kyverno process will be saved to unique files in this directory. If omitted, logs print to the console. |
-| `parallelStageCount` | `Integer`| `4` | The number of parallel stages to execute. Should not exceed the number of available executors on your Jenkins agent. |
-| `kyvernoVerbosity` | `Integer`| `2` | The verbosity level (`-v`) to pass to the `kyverno` CLI. Ranges from 0 (quiet) to 9 (debug). |
-| `extraKyvernoArgs` | `String` | `""` | A string of any additional flags to pass directly to the `kyverno` CLI (e.g., `'--cluster --audit-warn'`). |
-| `valuesFilePath` | `String` | `null` | The path to a Kyverno values file to be passed via the `--values-file` flag. |
-| `failFast` | `Boolean`| `false` | If `true`, the entire parallel block will stop as soon as the first shard fails. If `false`, all shards will run to completion. |
-| `configFile` | `String` | `null` | The path to a YAML file containing configuration parameters. |
+| `manifestSourceDirectory` | `String` | `./kustomize-output` | Directory containing the manifest files that Kyverno should scan. |
+| `policyPath` | `String` | `./policies` | File or directory containing the Kyverno policies to apply. |
+| `parallelStageCount` | `Integer` | `4` | Number of parallel Kyverno shards to run. Keep it at or below the number of executors that can access the same workspace path. |
+| `generatedResourcesDir` | `String` | `generated-resources` | Directory where Kyverno writes generated or mutated resources. |
+| `debugLogDir` | `String` | `null` | If set, `stderr` from each shard is written to `shard-<n>-debug.log` files in this directory. If not set, `stderr` stays in the build log. |
+| `kyvernoVerbosity` | `Integer` | `2` | Value passed to `kyverno apply -v`. |
+| `extraKyvernoArgs` | `String` | `""` | Extra flags appended to `kyverno apply`. Do not include `-o` or `--output`. |
+| `valuesFilePath` | `String` | `null` | Optional path passed to Kyverno with `--values-file`. |
+| `configFile` | `String` | `null` | YAML file loaded before direct parameters are applied. |
 
+## Outputs
+
+The library produces these artifacts during a run:
+
+- Merged policy report: `.workspace/run-<BUILD_NUMBER>/results/final-report.yaml`
+- Generated resources: written under `generatedResourcesDir`
+- Optional debug logs: `<debugLogDir>/shard-<n>-debug.log`
+
+The merged report is archived with `archiveArtifacts`, so it is available from the Jenkins build page even after the temporary workspace is cleaned up.
+
+## Current Behavior And Limits
+
+These points are worth knowing before you depend on the library in production:
+
+- The build is marked failed after the parallel stage completes if any shard failed.
+- `failFast` is not currently wired into the `parallel(...)` call, so there is no supported fail-fast mode yet.
+- The report filename is currently fixed to `final-report.yaml`.
+- Sharding copies files into flat shard directories. If your source tree contains duplicate filenames in different subdirectories, later copies can overwrite earlier ones inside a shard.
+- Absolute-path handling is Unix-style. Windows-style paths are not supported by the current implementation.
+- `parallelStageCount: 1` is supported. In that case the library skips sharding and runs Kyverno directly against `manifestSourceDirectory`.
+
+## Demo Repository
+
+A full example that uses this library with `kustom-trace` lives here:
+
+- [kustomize-at-scale-demo](https://github.com/zucca-devops-tooling/kustomize-at-scale-demo)
+
+## Development
+
+This repository includes unit tests for the library classes. Typical local commands are:
+
+```bash
+./gradlew test
+./gradlew clean assemble
+```
